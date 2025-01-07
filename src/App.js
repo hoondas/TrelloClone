@@ -2,6 +2,10 @@ import logo from "./logo.svg";
 import "./App.css";
 import { useState } from "react";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+import { Box, Button, Paper, Typography } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from '@mui/icons-material/Edit';
+import Navbar from "./components/Navbar";
 
 const initialItems = [
   { id: "111", content: "Content 1" },
@@ -18,12 +22,12 @@ const initialColumns = [
   {
     name: "Doing",
     id: "456",
-    items:[],
+    items: [],
   },
   {
     name: "Done",
     id: "789",
-    items:[],
+    items: [],
   },
 ];
 
@@ -34,6 +38,7 @@ function App() {
     var sourceIndex = 0;
     var destinationIndex = 0;
     var draggedItem = {};
+    console.log(result);
 
     for (var i in columns) {
       if (result.source.droppableId == columns[i].id) {
@@ -52,48 +57,116 @@ function App() {
       }
     }
 
-    // "Excluding" the dragged object by filtering  
-    var filteredSourceColumnItems = sourceColumnItems.filter((item) => item.id != result.draggableId);
+    // "Excluding" the dragged object by filtering
+    var filteredSourceColumnItems = sourceColumnItems.filter(
+      (item) => item.id != result.draggableId
+    );
 
     // Adding it to the new position and changing the state
     var columnsCopy = JSON.parse(JSON.stringify(columns));
     if (result.source.droppableId == result.destination.droppableId) {
-      filteredSourceColumnItems.splice(result.destination.index, 0, draggedItem)
+      filteredSourceColumnItems.splice(
+        result.destination.index,
+        0,
+        draggedItem
+      );
     } else {
       destinationColumnItems.splice(result.destination.index, 0, draggedItem);
       columnsCopy[destinationIndex].items = destinationColumnItems;
     }
     columnsCopy[sourceIndex].items = filteredSourceColumnItems;
     setColumns(columnsCopy);
+  };
+
+  // Adding a new card
+  const addingCard = (columnId) => {
+    const newCard = {
+      id: Date.now().toString(),
+      content: 'New Card'
+    }
+
+    const updatedColumns = columns.map((column) => {
+      if (column.id == columnId) {
+        return {
+          ...column,
+          items: [...column.items, newCard]
+        };
+      }
+      return column
+    });
+    setColumns(updatedColumns);
   }
 
   return (
-    <div style={{display:"flex", justifyContent:"center", }}>
-      <DragDropContext onDragEnd={onDragEnd}>
-        {columns.map((column) => (
-          <div style={{display: "flex", flexDirection: "column", alignItems: "center"}}>
-            <h1>{column.name}</h1>
-            <Droppable droppableId={column.id} key={column.id}>
-              {(provided) => (
-                <div ref={provided.innerRef} style={{backgroundColor:"lightblue", width:250, height:500, padding: 10, margin: 10}}>
-                  {column.items.map((item, index) => (
-                    <Draggable draggableId={item.id} index={index} key={item.id}>
-                      {(provided) => (
-                        <div {...provided.dragHandleProps} {...provided.draggableProps} ref={provided.innerRef} style={{backgroundColor:"gray", height: 40, marginBottom: 10, ...provided.draggableProps.style}}>
-                          {item.content}
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </div>
-        ))}
-      </DragDropContext>
-    </div>
-    
+    <Box
+      sx={{
+        backgroundImage: "linear-gradient(45deg, #8587f3 30%, #fd84ae 100%)",
+      }}
+    >
+      <Navbar />
+      <Box display="flex" justifyContent="center" height="100vh">
+        <DragDropContext onDragEnd={onDragEnd}>
+          {columns.map((column) => (
+            <Box
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Droppable droppableId={column.id} key={column.id}>
+                {(provided) => (
+                  <Box
+                    style={{
+                      backgroundColor: "#ebebf1",
+                      width: 400,
+                      height: "fit-content",
+                      padding: 10,
+                      margin: 10,
+                    }}
+                  >
+                    <Typography variant="h4">{column.name}</Typography>
+                    <Box ref={provided.innerRef} width="100%" height="100%">
+                      {column.items.map((item, index) => (
+                        <Draggable
+                          draggableId={item.id}
+                          index={index}
+                          key={item.id}
+                        >
+                          {(provided) => (
+                            <Paper
+                              elevation={2}
+                              {...provided.dragHandleProps}
+                              {...provided.draggableProps}
+                              ref={provided.innerRef}
+                              style={{
+                                height: 40,
+                                marginTop: 10,
+                                padding: 5,
+                                ...provided.draggableProps.style,
+                              }}
+                            >
+                              {item.content}
+                            </Paper>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      <Button sx={{marginTop:"10px", color: "#959dab"}} size="large" startIcon={<AddIcon />} onClick={() => addingCard(column.id)}>
+                        Card
+                      </Button>
+                      <Button sx={{marginTop:"10px", color: "#959dab"}} size="large" startIcon={<EditIcon />} onClick={() => addingCard(column.id)}>
+                        Edit
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
+              </Droppable>
+            </Box>
+          ))}
+        </DragDropContext>
+      </Box>
+    </Box>
   );
 }
 
