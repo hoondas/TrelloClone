@@ -4,7 +4,8 @@ import { useState } from "react";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import { Box, Button, Paper, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from '@mui/icons-material/Edit';
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from '@mui/icons-material/Delete';
 import Navbar from "./components/Navbar";
 
 const initialItems = [
@@ -33,67 +34,82 @@ const initialColumns = [
 
 function App() {
   const [columns, setColumns] = useState(initialColumns);
+  const [editingItemId, setEditingItemId] = useState(null);
 
   const onDragEnd = (result) => {
-    var sourceIndex = 0;
-    var destinationIndex = 0;
-    var draggedItem = {};
-    console.log(result);
+    const { source, destination } = result;
 
-    for (var i in columns) {
-      if (result.source.droppableId == columns[i].id) {
-        var sourceColumnItems = columns[i].items;
-        sourceIndex = i;
-      } else if (result.destination.droppableId == columns[i].id) {
-        var destinationColumnItems = [...columns[i].items];
-        destinationIndex = i;
-      }
-    }
+    if (!destination) return;
 
-    // Find the dragged item
-    for (var i in sourceColumnItems) {
-      if (sourceColumnItems[i].id == result.draggableId) {
-        draggedItem = sourceColumnItems[i];
-      }
-    }
-
-    // "Excluding" the dragged object by filtering
-    var filteredSourceColumnItems = sourceColumnItems.filter(
-      (item) => item.id != result.draggableId
+    const sourceColumnIndex = columns.findIndex(
+      (column) => column.id == source.droppableId
+    );
+    const destColumnIndex = columns.findIndex(
+      (column) => column.id == destination.droppableId
     );
 
-    // Adding it to the new position and changing the state
-    var columnsCopy = JSON.parse(JSON.stringify(columns));
-    if (result.source.droppableId == result.destination.droppableId) {
-      filteredSourceColumnItems.splice(
-        result.destination.index,
-        0,
-        draggedItem
-      );
-    } else {
-      destinationColumnItems.splice(result.destination.index, 0, draggedItem);
-      columnsCopy[destinationIndex].items = destinationColumnItems;
-    }
-    columnsCopy[sourceIndex].items = filteredSourceColumnItems;
-    setColumns(columnsCopy);
+    const sourceColumn = columns[sourceColumnIndex];
+    const destColumn = columns[destColumnIndex];
+
+    // Excluding the item from the source columns
+    const [movedItem] = sourceColumn.items.splice(source.index, 1);
+
+    // Adding the item to the new position
+    destColumn.items.splice(destination.index, 0, movedItem);
+
+    // Update the state with the modified columns
+    const updatedColumns = [...columns];
+    updatedColumns[sourceColumnIndex] = sourceColumn;
+    updatedColumns[destColumnIndex] = destColumn;
+
+    setColumns(updatedColumns);
   };
 
   // Adding a new card
   const addingCard = (columnId) => {
     const newCard = {
       id: Date.now().toString(),
-      content: 'New Card'
-    }
+      content: "New Card",
+    };
 
     const updatedColumns = columns.map((column) => {
       if (column.id == columnId) {
         return {
           ...column,
-          items: [...column.items, newCard]
+          items: [...column.items, newCard],
         };
       }
-      return column
+      return column;
     });
+    setColumns(updatedColumns);
+  };
+
+  //Editing the card
+  const toggleEditMode = (id) => {
+    setEditingItemId(editingItemId === id ? null : id);
+  };
+
+  const updateItemContent = (columnId, itemId, newContent) => {
+    const updatedColumns = columns.map((column) => {
+      if (columnId === column.id) {
+        return {
+          ...column,
+          items: column.items.map((item) =>
+            item.id === itemId ? { ...item, content: newContent } : item
+          ),
+        };
+      }
+      return column;
+    });
+    setColumns(updatedColumns);
+  };
+
+  // Deleting the card
+  const deleteCard = (itemId) => {
+    const updatedColumns = columns.map((column) => ({
+      ...column,
+      items: column.items.filter((item) => item.id !== itemId),
+    }));
     setColumns(updatedColumns);
   }
 
@@ -146,17 +162,65 @@ function App() {
                                 ...provided.draggableProps.style,
                               }}
                             >
-                              {item.content}
+                              {editingItemId === item.id ? (
+                                <Box display="flex" alignItems="center">
+                                  <input
+                                    type="text"
+                                    value={item.content}
+                                    onChange={(e) =>
+                                      updateItemContent(
+                                        column.id,
+                                        item.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    style={{ flex: 1, marginRight: 5 }}
+                                  />
+                                  <Button
+                                    onClick={() => toggleEditMode(item.id)}
+                                    size="small"
+                                    color="primary"
+                                  >
+                                    Save
+                                  </Button>
+                                  
+                                </Box>
+                              ) : (
+                                <Box display="flex" alignItems="center">
+                                  <Typography style={{ flex: 1 }}>
+                                    {item.content}
+                                  </Typography>
+                                  <Button
+                                    onClick={() => toggleEditMode(item.id)}
+                                    size="small"
+                                    color="primary"
+                                    startIcon={<EditIcon />}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    onClick={() => deleteCard(item.id)}
+                                    size="small"
+                                    color="secondary"
+                                    startIcon={<DeleteIcon />}
+                                  >
+                                    Delete
+                                  </Button>
+                                </Box>
+                              )}
                             </Paper>
                           )}
                         </Draggable>
                       ))}
+
                       {provided.placeholder}
-                      <Button sx={{marginTop:"10px", color: "#959dab"}} size="large" startIcon={<AddIcon />} onClick={() => addingCard(column.id)}>
+                      <Button
+                        sx={{ marginTop: "10px", color: "#959dab" }}
+                        size="large"
+                        startIcon={<AddIcon />}
+                        onClick={() => addingCard(column.id)}
+                      >
                         Card
-                      </Button>
-                      <Button sx={{marginTop:"10px", color: "#959dab"}} size="large" startIcon={<EditIcon />} onClick={() => addingCard(column.id)}>
-                        Edit
                       </Button>
                     </Box>
                   </Box>
